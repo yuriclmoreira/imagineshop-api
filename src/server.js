@@ -1,10 +1,11 @@
 import "dotenv/config";
 import express from "express";
-
+import jwt from "jsonwebtoken";
+import { authMiddleware } from "./middleware/authMiddleware.js";
 import { UserService } from "./services/user-service.js";
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 8080;
 
 app.use(express.json());
 
@@ -12,7 +13,24 @@ app.get("/", async (req, res) => {
   res.send("IMAGINE SHOP");
 });
 
-//Criar usuario
+// Metodo de login
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const userService = new UserService();
+  const userLogged = await userService.login(email, password);
+  if (userLogged) {
+    const secretkey = process.env.SECRET_KEY;
+    const token = jwt.sign({ user: userLogged }, secretkey, {
+      expiresIn: "3600s",
+    });
+    return res.status(200).json({ token });
+  }
+  return res.status(400).json({ message: "E-mail ou senha inválidos." });
+});
+
+app.use(authMiddleware);
+
+// Criar usuario
 app.post("/users", async (req, res) => {
   const { name, email, password } = req.body;
   const user = { name, email, password };
@@ -23,7 +41,7 @@ app.post("/users", async (req, res) => {
   return res.status(201).json(user);
 });
 
-//Listar todos os usarios
+// Listar todos os usarios
 app.get("/users", async (req, res) => {
   const userService = new UserService();
 
@@ -31,9 +49,9 @@ app.get("/users", async (req, res) => {
   return res.status(200).json(users);
 });
 
-//Procurar um usario pelo id
+// Procurar um usario pelo id
 app.get("/users/:id", async (req, res) => {
-  const id = req.params;
+  const id = req.params.id;
   const userService = new UserService();
 
   const user = await userService.findById(id);
@@ -43,9 +61,9 @@ app.get("/users/:id", async (req, res) => {
   return res.status(404).json({ message: "Usuário não encontrado" });
 });
 
-//Deletar um usuario
+// Deletar um usuario
 app.delete("/users/:id", async (req, res) => {
-  const id = req.params;
+  const id = req.params.id;
   const userService = new UserService();
   const user = await userService.findById(id);
   if (user) {
@@ -55,9 +73,9 @@ app.delete("/users/:id", async (req, res) => {
   return res.status(404).json({ message: "Usuário não encontrado" });
 });
 
-//Update de um usuario
+// Update de um usuario
 app.put("/users/:id", async (req, res) => {
-  const id = req.params;
+  const id = req.params.id;
   const { name, email, password } = req.body;
   const user = { name, email, password };
   const userService = new UserService();
