@@ -4,7 +4,7 @@ import express from "express";
 import { UserService } from "./services/user-service.js";
 
 const app = express();
-const port = 3000;
+const port = 8080;
 
 app.get("/", async (req, res) => {
   const userService = new UserService();
