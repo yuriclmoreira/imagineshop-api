@@ -1,19 +1,17 @@
 import "dotenv/config";
 import express from "express";
 import jwt from "jsonwebtoken";
-
 import multer from "multer";
 import crypto from "crypto";
 import { extname } from "path";
+import cors from "cors";
 
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import { ProductService } from "./services/product-service.js";
-
 import { UserService } from "./services/user-service.js";
 
 const app = express();
 const port = process.env.PORT || 8080;
-
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -28,9 +26,9 @@ const storage = multer.diskStorage({
 
 const uploadMiddleware = multer({ storage });
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 
 app.get("/", async (req, res) => {
   res.send("IMAGINE SHOP");
@@ -52,8 +50,6 @@ app.post("/login", async (req, res) => {
   return res.status(400).json({ message: "E-mail ou senha inválidos." });
 });
 
-app.use(authMiddleware);
-
 // Criar usuario
 app.post("/users", async (req, res) => {
   const { name, email, password } = req.body;
@@ -71,13 +67,23 @@ app.post("/users", async (req, res) => {
   return res.status(400).json({ message: "E-mail ou senha inválidos." });
 });
 
-
 // Listar todos os produtos
 app.get("/products", async (req, res) => {
   const productService = new ProductService();
 
   const products = await productService.findAll();
   return res.status(200).json(products);
+});
+
+app.get("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const productService = new ProductService();
+  const product = await productService.findById(id);
+
+  if (product) {
+    return res.status(200).json(product);
+  }
+  return res.status(404).json({ message: "Produto não encontrado" });
 });
 
 app.use("/uploads", express.static("uploads"));
@@ -92,9 +98,7 @@ app.post("/users", async (req, res) => {
 
   await userService.create(user);
 
-
   await userService.create(user);
-
 
   return res.status(201).json(user);
 });
@@ -143,7 +147,6 @@ app.put("/users/:id", async (req, res) => {
     return res.status(200).json({ message: "Usuário atualizado com sucesso" });
   }
   return res.status(404).json({ message: "Usuário não encontrado" });
-
 });
 
 // Criando um novo produto
@@ -156,9 +159,18 @@ app.post("/products", uploadMiddleware.single("image"), async (req, res) => {
   await productService.create(product);
 
   return res.status(201).json(product);
-
 });
 
+app.post("/products/sell", async (req, res) => {
+  const { products } = req.body;
+  const productService = new ProductService();
+  for (const product of products) {
+    await productService.sellProducts(product);
+  }
+  return res.status(200).json({ message: "success" });
+});
+
+app.use(authMiddleware);
 app.listen(port, () => {
   console.log(`App listening on http://localhost:${port}`);
 });
