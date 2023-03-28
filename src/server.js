@@ -1,14 +1,13 @@
 import "dotenv/config";
 import express from "express";
 import jwt from "jsonwebtoken";
-
 import multer from "multer";
 import crypto from "crypto";
 import { extname } from "path";
+import cors from "cors";
 
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import { ProductService } from "./services/product-service.js";
-
 import { UserService } from "./services/user-service.js";
 
 const app = express();
@@ -27,6 +26,7 @@ const storage = multer.diskStorage({
 
 const uploadMiddleware = multer({ storage });
 
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -49,8 +49,6 @@ app.post("/login", async (req, res) => {
   }
   return res.status(400).json({ message: "E-mail ou senha inválidos." });
 });
-
-app.use(authMiddleware);
 
 // Criar usuario
 app.post("/users", async (req, res) => {
@@ -163,6 +161,16 @@ app.post("/products", uploadMiddleware.single("image"), async (req, res) => {
   return res.status(201).json(product);
 });
 
+app.post("/products/sell", async (req, res) => {
+  const { products } = req.body;
+  const productService = new ProductService();
+  for (const product of products) {
+    await productService.sellProducts(product);
+  }
+  return res.status(200).json({ message: "success" });
+});
+
+app.use(authMiddleware);
 app.listen(port, () => {
   console.log(`App listening on http://localhost:${port}`);
 });
